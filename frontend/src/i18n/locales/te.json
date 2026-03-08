@@ -31,7 +31,8 @@
     "apply_service": "సేవ కోసం దరఖాస్తు చేయండి",
     "ollama_connected": "కనెక్ట్ అయింది",
     "ollama_checking": "తనిఖీ చేస్తోంది…",
-    "ollama_offline": "ఆఫ్‌లైన్"
+    "ollama_offline": "ఆఫ్‌లైన్",
+    "my_applications": "నా దరఖాస్తులు"
   },
   "chat": {
     "heading": "💬 చాట్",
@@ -68,6 +69,22 @@
     "hi": "हिंदी",
     "mr": "मराठी",
     "te": "తెలుగు"
+  },
+  "applications": {
+    "title": "నా దరఖాస్తులు",
+    "no_requests": "ఇంకా సేవా అభ్యర్థనలు లేవు.",
+    "request_id": "అభ్యర్థన ID",
+    "service": "సేవ",
+    "status": "స్థితి",
+    "date": "దరఖాస్తు తేదీ",
+    "pending": "పెండింగ్",
+    "approved": "ఆమోదించబడింది",
+    "rejected": "తిరస్కరించబడింది",
+    "processing": "ప్రాసెసింగ్",
+    "ration_card": "రేషన్ కార్డ్",
+    "birth_certificate": "జనన ధృవీకరణ పత్రం",
+    "grievance": "ఫిర్యాదు",
+    "housing": "గృహ నిర్మాణం"
   },
   "logout": "సైన్ అవుట్"
 }

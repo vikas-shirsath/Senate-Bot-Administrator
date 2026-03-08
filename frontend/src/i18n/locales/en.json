@@ -31,7 +31,8 @@
     "apply_service": "Apply for service",
     "ollama_connected": "Connected",
     "ollama_checking": "Checking…",
-    "ollama_offline": "Offline"
+    "ollama_offline": "Offline",
+    "my_applications": "My Applications"
   },
   "chat": {
     "heading": "💬 Chat",
@@ -68,6 +69,22 @@
     "hi": "हिंदी",
     "mr": "मराठी",
     "te": "తెలుగు"
+  },
+  "applications": {
+    "title": "My Applications",
+    "no_requests": "No service requests yet.",
+    "request_id": "Request ID",
+    "service": "Service",
+    "status": "Status",
+    "date": "Applied On",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "processing": "Processing",
+    "ration_card": "Ration Card",
+    "birth_certificate": "Birth Certificate",
+    "grievance": "Grievance",
+    "housing": "Housing"
   },
   "logout": "Sign Out"
 }

@@ -31,7 +31,8 @@
     "apply_service": "सेवेसाठी अर्ज करा",
     "ollama_connected": "जोडलेले",
     "ollama_checking": "तपासत आहे…",
-    "ollama_offline": "ऑफलाइन"
+    "ollama_offline": "ऑफलाइन",
+    "my_applications": "माझे अर्ज"
   },
   "chat": {
     "heading": "💬 चॅट",
@@ -68,6 +69,22 @@
     "hi": "हिंदी",
     "mr": "मराठी",
     "te": "తెలుగు"
+  },
+  "applications": {
+    "title": "माझे अर्ज",
+    "no_requests": "अजून कोणतेही सेवा अर्ज नाहीत.",
+    "request_id": "अर्ज ID",
+    "service": "सेवा",
+    "status": "स्थिती",
+    "date": "अर्ज तारीख",
+    "pending": "प्रलंबित",
+    "approved": "मंजूर",
+    "rejected": "नामंजूर",
+    "processing": "प्रक्रियेत",
+    "ration_card": "रेशन कार्ड",
+    "birth_certificate": "जन्म प्रमाणपत्र",
+    "grievance": "तक्रार",
+    "housing": "गृहनिर्माण"
   },
   "logout": "लॉगआउट"
 }
