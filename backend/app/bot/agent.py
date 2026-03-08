@@ -4,6 +4,7 @@ entity extraction, and response generation.
 """
 
 import json
+import re
 import httpx
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
@@ -29,6 +30,13 @@ You can perform the following actions by outputting a JSON tool-call block:
 
 5. **check_eligibility** — Check eligibility for a government scheme.
    Ask follow-up questions to gather: income, age, category (SC/ST/OBC/General), state, family_size.
+
+6. **apply_service** — Submit an application for a government service.
+   Required entities: service_type (one of: ration_card, birth_certificate, grievance, housing).
+   Optional: name, description, pin.
+
+7. **check_request_status** — Check the status of a previously submitted service request.
+   Required entity: request_id (format like RC-10021, BC-10045, GR-10032, HS-10001).
 
 RULES:
 - If you can identify the user's intent AND have the required entities, respond ONLY with a JSON block like:
@@ -77,7 +85,6 @@ def parse_action(llm_response: str) -> dict | None:
     Try to extract a JSON action block from the LLM response.
     Returns the parsed dict if found, else None.
     """
-    # Try to find JSON in the response
     text = llm_response.strip()
 
     # If the whole response is JSON
@@ -89,7 +96,6 @@ def parse_action(llm_response: str) -> dict | None:
         pass
 
     # Look for JSON within markdown code blocks
-    import re
     json_blocks = re.findall(r"```(?:json)?\s*\n?({.*?})\s*\n?```", text, re.DOTALL)
     for block in json_blocks:
         try:

@@ -3,10 +3,20 @@ Service Router — maps detected intents/actions from the LLM to concrete
 API calls on the backend, then formats the result for the chatbot.
 """
 
+import random
 import httpx
+from app.supabase_client import get_supabase
 
 # Base URL for internal API calls (self-referencing the FastAPI app)
 _BASE = "http://localhost:8000"
+
+# Prefix map for request IDs
+_SERVICE_PREFIXES = {
+    "ration_card": "RC",
+    "birth_certificate": "BC",
+    "grievance": "GR",
+    "housing": "HS",
+}
 
 
 async def execute_action(action: str, entities: dict) -> dict:
@@ -18,7 +28,7 @@ async def execute_action(action: str, entities: dict) -> dict:
     if handler is None:
         return {
             "success": False,
-            "message": f"Unknown action '{action}'. I can help with ration card status, birth certificate status, location lookup, and grievance registration.",
+            "message": f"Unknown action '{action}'. I can help with ration card status, birth certificate status, location lookup, grievance registration, service applications, and request status tracking.",
         }
     return await handler(entities)
 
@@ -130,29 +140,23 @@ async def _register_grievance(entities: dict) -> dict:
 
 
 async def _check_eligibility(entities: dict) -> dict:
-    """
-    Rule-based eligibility checker for common government housing schemes.
-    """
+    """Rule-based eligibility checker for common government schemes."""
     income = entities.get("income", 0)
     age = entities.get("age", 0)
     category = entities.get("category", "General")
-    family_size = entities.get("family_size", 1)
 
     eligible_schemes = []
 
-    # PMAY – Pradhan Mantri Awas Yojana
     if income and int(income) <= 300000:
         eligible_schemes.append(
             "**Pradhan Mantri Awas Yojana (PMAY):** Eligible for housing subsidy up to ₹2.67 lakh. "
             "(Reference: PMAY Guidelines 2015, Section 4)"
         )
-    # NFSA
     if income and int(income) <= 250000:
         eligible_schemes.append(
             "**National Food Security Act:** Eligible for subsidized food grains. "
             "(Reference: NFSA 2013, Section 3)"
         )
-    # SC/ST scholarship
     if category in ("SC", "ST") and age and int(age) <= 25:
         eligible_schemes.append(
             "**Post-Matric Scholarship for SC/ST Students:** Eligible for educational scholarship. "
@@ -179,6 +183,102 @@ async def _check_eligibility(entities: dict) -> dict:
     }
 
 
+# ── NEW: Service Request Application ────────────────────
+
+async def _apply_service(entities: dict) -> dict:
+    """
+    Submit a service application.  Generates a unique request ID,
+    stores it in the service_requests table.
+    """
+    service_type = entities.get("service_type", "")
+    user_id = entities.get("_user_id", "")
+
+    if not service_type:
+        return {
+            "success": False,
+            "message": "Please specify the service type you want to apply for (e.g., ration_card, birth_certificate, grievance, housing).",
+        }
+
+    prefix = _SERVICE_PREFIXES.get(service_type, "SR")
+    request_id = f"{prefix}-{random.randint(10000, 99999)}"
+
+    if user_id:
+        try:
+            sb = get_supabase()
+            sb.table("service_requests").insert({
+                "user_id": user_id,
+                "service_type": service_type,
+                "request_id": request_id,
+                "status": "pending",
+            }).execute()
+        except Exception:
+            pass  # Gracefully continue even if DB save fails
+
+    friendly_name = service_type.replace("_", " ").title()
+    return {
+        "success": True,
+        "service": "Service Application",
+        "data": {"request_id": request_id, "service_type": service_type, "status": "pending"},
+        "summary": (
+            f"✅ Your **{friendly_name}** application has been submitted!\n\n"
+            f"**Request ID:** {request_id}\n"
+            f"**Status:** Pending\n\n"
+            f"You can check the status anytime by saying:\n"
+            f"*\"Check status of {request_id}\"*"
+        ),
+    }
+
+
+# ── NEW: Check Service Request Status ───────────────────
+
+async def _check_request_status(entities: dict) -> dict:
+    """Query the service_requests table by request_id."""
+    request_id = entities.get("request_id", "")
+    if not request_id:
+        return {
+            "success": False,
+            "message": "Please provide a request ID (e.g., RC-10021).",
+        }
+
+    try:
+        sb = get_supabase()
+        result = (
+            sb.table("service_requests")
+            .select("*")
+            .eq("request_id", request_id.upper())
+            .execute()
+        )
+        if result.data:
+            rec = result.data[0]
+            friendly = rec["service_type"].replace("_", " ").title()
+            status_emoji = "✅" if rec["status"] == "approved" else "⏳" if rec["status"] == "pending" else "📋"
+            status_msg = {
+                "pending": "Your request is currently under review.",
+                "approved": "Your request has been approved!",
+                "rejected": "Your request was unfortunately rejected.",
+                "processing": "Your request is being processed.",
+            }.get(rec["status"], f"Current status: {rec['status']}")
+
+            return {
+                "success": True,
+                "service": "Request Status",
+                "data": rec,
+                "summary": (
+                    f"{status_emoji} **{friendly} — {rec['request_id']}**\n\n"
+                    f"**Status:** {rec['status'].title()}\n"
+                    f"{status_msg}\n\n"
+                    f"**Submitted:** {rec['created_at']}"
+                ),
+            }
+    except Exception:
+        pass
+
+    return {
+        "success": False,
+        "message": f"No service request found with ID **{request_id}**. Please double-check the request ID.",
+    }
+
+
 # ── Action map ───────────────────────────────────────────
 _ACTION_MAP = {
     "check_ration": _check_ration,
@@ -186,4 +286,6 @@ _ACTION_MAP = {
     "check_location": _check_location,
     "register_grievance": _register_grievance,
     "check_eligibility": _check_eligibility,
+    "apply_service": _apply_service,
+    "check_request_status": _check_request_status,
 }
