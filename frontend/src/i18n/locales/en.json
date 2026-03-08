@@ -1,0 +1,73 @@
+{
+  "app": {
+    "title": "Senate Bot",
+    "subtitle": "Digital Governance Platform",
+    "model_badge": "llama3.1:8b",
+    "disclaimer": "Senate Bot uses Llama 3.1 to assist with governance queries. Always verify information with official sources."
+  },
+  "welcome": {
+    "heading": "Welcome to Senate Bot",
+    "heading_user": "Welcome, {{name}}!",
+    "description": "Your AI-powered governance assistant. Ask me about ration card status, birth certificates, location info, scheme eligibility, or file a grievance.",
+    "chips": {
+      "ration": "Check ration card MH123456",
+      "pincode": "My pincode is 400001",
+      "birth": "Check birth certificate BC1021",
+      "grievance": "I want to register a grievance",
+      "eligibility": "Am I eligible for housing scheme?",
+      "apply": "I want to apply for ration card"
+    }
+  },
+  "sidebar": {
+    "new_chat": "＋ New Chat",
+    "chat_history": "Chat History",
+    "no_chats": "No chats yet. Start a conversation!",
+    "quick_actions": "Quick Actions",
+    "ration_status": "Ration card status",
+    "birth_cert": "Birth certificate",
+    "location": "Location lookup",
+    "grievance": "File a grievance",
+    "housing": "Housing eligibility",
+    "apply_service": "Apply for service",
+    "ollama_connected": "Connected",
+    "ollama_checking": "Checking…",
+    "ollama_offline": "Offline"
+  },
+  "chat": {
+    "heading": "💬 Chat",
+    "placeholder": "Ask about government services…",
+    "new_chat_btn": "＋",
+    "server_error": "⚠️ Unable to reach the server. Please make sure the FastAPI backend is running on port 8000.",
+    "escalation": "⚠️ Escalation suggested — connect to human officer"
+  },
+  "auth": {
+    "login_title": "Senate Bot",
+    "login_subtitle": "Digital Governance Platform",
+    "google_btn": "Continue with Google",
+    "or_divider": "or",
+    "email_label": "Email",
+    "email_placeholder": "you@example.com",
+    "password_label": "Password",
+    "password_placeholder": "••••••••",
+    "signin_btn": "Sign In",
+    "signup_btn": "Sign Up",
+    "loading_btn": "Please wait…",
+    "check_email": "Check your email for a confirmation link!",
+    "has_account": "Already have an account?",
+    "no_account": "Don't have an account?",
+    "loading": "Loading…"
+  },
+  "lang_select": {
+    "title": "Choose Your Language",
+    "subtitle": "Select your preferred language to continue",
+    "continue": "Continue"
+  },
+  "language": {
+    "label": "🌐 Language",
+    "en": "English",
+    "hi": "हिंदी",
+    "mr": "मराठी",
+    "te": "తెలుగు"
+  },
+  "logout": "Sign Out"
+}
