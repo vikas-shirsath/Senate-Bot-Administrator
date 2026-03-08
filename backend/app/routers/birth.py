@@ -1,39 +1,38 @@
 """
-Birth Certificate mock service router.
+Birth Certificate service router — Supabase-backed.
 """
 
 from fastapi import APIRouter
+from app.supabase_client import get_supabase
 
 router = APIRouter()
-
-_BIRTH_DB: dict[str, dict] = {
-    "BC1021": {
-        "certificate_id": "BC1021",
-        "name": "Amit Sharma",
-        "status": "Issued",
-        "issue_date": "2023-05-10",
-        "district": "Mumbai",
-        "state": "Maharashtra",
-        "policy_reference": "Registration of Births and Deaths Act 1969, Section 8 — Birth must be registered within 21 days.",
-    },
-    "BC2045": {
-        "certificate_id": "BC2045",
-        "name": "Priya Patil",
-        "status": "Processing",
-        "issue_date": None,
-        "district": "Pune",
-        "state": "Maharashtra",
-        "policy_reference": "Registration of Births and Deaths Act 1969 — Delayed registration may require an affidavit and magistrate order.",
-    },
-}
 
 
 @router.get("/birth/{certificate_id}")
 async def get_birth_status(certificate_id: str):
-    """Return mock birth-certificate status."""
-    record = _BIRTH_DB.get(certificate_id.upper())
-    if record:
-        return record
+    """Look up a birth certificate by ID from the database."""
+    sb = get_supabase()
+    result = (
+        sb.table("birth_certificates")
+        .select("*")
+        .eq("certificate_id", certificate_id.upper())
+        .execute()
+    )
+    if result.data:
+        rec = result.data[0]
+        return {
+            "certificate_id": rec["certificate_id"],
+            "name": rec["name"],
+            "status": rec["status"],
+            "issue_date": rec.get("issue_date"),
+            "district": rec["district"],
+            "state": rec["state"],
+            "date_of_birth": rec.get("date_of_birth"),
+            "father_name": rec.get("father_name", ""),
+            "mother_name": rec.get("mother_name", ""),
+            "place_of_birth": rec.get("place_of_birth", ""),
+            "policy_reference": rec["policy_reference"],
+        }
     return {
         "certificate_id": certificate_id,
         "name": "Unknown",

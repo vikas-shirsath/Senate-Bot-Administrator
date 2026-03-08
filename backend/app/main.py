@@ -8,7 +8,7 @@ load_dotenv()  # Load .env before anything else
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import chat, location, ration, birth, grievance, chats, auth_router
+from app.routers import chat, location, ration, birth, grievance, chats, auth_router, service_requests
 
 app = FastAPI(
     title="Senate Bot Administrator",
@@ -33,6 +33,7 @@ app.include_router(location.router, prefix="/api", tags=["Location"])
 app.include_router(ration.router, prefix="/api", tags=["Ration"])
 app.include_router(birth.router, prefix="/api", tags=["Birth Certificate"])
 app.include_router(grievance.router, prefix="/api", tags=["Grievance"])
+app.include_router(service_requests.router, prefix="/service-requests", tags=["Service Requests"])
 
 
 @app.get("/")

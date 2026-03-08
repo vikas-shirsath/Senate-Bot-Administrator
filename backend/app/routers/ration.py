@@ -1,47 +1,38 @@
 """
-Ration Card mock service router.
+Ration Card service router — Supabase-backed.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.auth import get_current_user
+from app.supabase_client import get_supabase
 
 router = APIRouter()
-
-# ── Mock data store ──────────────────────────────────────
-_RATION_DB: dict[str, dict] = {
-    "MH123456": {
-        "ration_id": "MH123456",
-        "holder_name": "Rajesh Kumar",
-        "status": "Active",
-        "card_type": "BPL",
-        "entitlement": "5 kg wheat, 3 kg rice per person per month",
-        "scheme": "National Food Security Act",
-        "family_members": 4,
-        "district": "Mumbai",
-        "state": "Maharashtra",
-        "policy_reference": "National Food Security Act 2013, Section 3 — Every eligible household is entitled to receive subsidized food grains from the Targeted Public Distribution System.",
-    },
-    "MH789012": {
-        "ration_id": "MH789012",
-        "holder_name": "Sunita Devi",
-        "status": "Inactive",
-        "card_type": "AAY",
-        "entitlement": "35 kg food grains per household per month",
-        "scheme": "Antyodaya Anna Yojana",
-        "family_members": 6,
-        "district": "Pune",
-        "state": "Maharashtra",
-        "policy_reference": "Antyodaya Anna Yojana — Launched in December 2000, this scheme targets the poorest of the poor families.",
-    },
-}
 
 
 @router.get("/ration/{ration_id}")
 async def get_ration_status(ration_id: str):
-    """Return mock ration-card status for a given ID."""
-    record = _RATION_DB.get(ration_id.upper())
-    if record:
-        return record
-    # Generic fallback for any unknown ID
+    """Look up a ration card by ID from the database."""
+    sb = get_supabase()
+    result = (
+        sb.table("ration_cards")
+        .select("*")
+        .eq("ration_id", ration_id.upper())
+        .execute()
+    )
+    if result.data:
+        rec = result.data[0]
+        return {
+            "ration_id": rec["ration_id"],
+            "holder_name": rec["holder_name"],
+            "status": rec["status"],
+            "card_type": rec["card_type"],
+            "entitlement": rec["entitlement"],
+            "scheme": rec["scheme"],
+            "family_members": rec["family_members"],
+            "district": rec["district"],
+            "state": rec["state"],
+            "policy_reference": rec["policy_reference"],
+        }
     return {
         "ration_id": ration_id,
         "holder_name": "Unknown",
