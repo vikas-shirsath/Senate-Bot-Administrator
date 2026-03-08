@@ -1,0 +1,24 @@
+name: location
+description: Get location details from PIN code
+intents:
+  - check_location
+  - pincode
+  - location
+keywords:
+  - pincode
+  - pin code
+  - pin
+  - location
+  - area
+  - district
+  - state
+  - address
+endpoint: /api/location/{pin}
+method: GET
+parameters:
+  - name: pin
+    type: string
+    required: true
+    description: 6-digit Indian PIN code
+    pattern: "\\d{6}"
+policy_references: []

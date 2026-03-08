@@ -1,0 +1,27 @@
+name: ration_card
+description: Check ration card status and entitlements
+intents:
+  - check_ration
+  - ration_status
+  - ration_card
+keywords:
+  - ration
+  - ration card
+  - food
+  - wheat
+  - rice
+  - BPL
+  - AAY
+  - food security
+endpoint: /api/ration/{ration_id}
+method: GET
+parameters:
+  - name: ration_id
+    type: string
+    required: true
+    description: The ration card ID (e.g. MH123456)
+    pattern: "[A-Z]{2}\\d{6}"
+policy_references:
+  - name: National Food Security Act 2013
+    section: Section 3
+    summary: Every eligible household is entitled to receive subsidized food grains.

@@ -1,0 +1,23 @@
+name: birth_certificate
+description: Check birth certificate status
+intents:
+  - check_birth
+  - birth_certificate
+  - birth_status
+keywords:
+  - birth
+  - birth certificate
+  - certificate
+  - birth registration
+endpoint: /api/birth/{certificate_id}
+method: GET
+parameters:
+  - name: certificate_id
+    type: string
+    required: true
+    description: The birth certificate ID (e.g. BC1021)
+    pattern: "BC\\d+"
+policy_references:
+  - name: Registration of Births and Deaths Act 1969
+    section: Section 8
+    summary: Birth must be registered within 21 days of occurrence.

@@ -1,0 +1,35 @@
+"""
+Senate Bot Administrator — FastAPI Backend
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import chat, location, ration, birth, grievance
+
+app = FastAPI(
+    title="Senate Bot Administrator",
+    description="Autonomous Digital Governance ChatOps Platform",
+    version="1.0.0",
+)
+
+# CORS — allow the React dev server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Routers ──────────────────────────────────────────────
+app.include_router(chat.router, prefix="/chat", tags=["Chat"])
+app.include_router(location.router, prefix="/api", tags=["Location"])
+app.include_router(ration.router, prefix="/api", tags=["Ration"])
+app.include_router(birth.router, prefix="/api", tags=["Birth Certificate"])
+app.include_router(grievance.router, prefix="/api", tags=["Grievance"])
+
+
+@app.get("/")
+async def root():
+    return {"message": "Senate Bot Administrator API is running"}

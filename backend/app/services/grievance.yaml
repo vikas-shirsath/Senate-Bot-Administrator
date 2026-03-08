@@ -1,0 +1,36 @@
+name: grievance
+description: Register a public grievance
+intents:
+  - register_grievance
+  - file_complaint
+  - grievance
+keywords:
+  - grievance
+  - complaint
+  - problem
+  - issue
+  - report
+  - file
+endpoint: /api/grievance
+method: POST
+parameters:
+  - name: name
+    type: string
+    required: true
+    description: Name of the complainant
+  - name: description
+    type: string
+    required: true
+    description: Description of the grievance
+  - name: category
+    type: string
+    required: false
+    description: Category (e.g. Water, Electricity, Roads)
+  - name: pin
+    type: string
+    required: false
+    description: PIN code of the complainant
+policy_references:
+  - name: CPGRAMS
+    section: ""
+    summary: Citizens can lodge grievances related to service delivery of any government department.
