@@ -1,4 +1,4 @@
-# 🏛️ Senate Bot Administrator
+# Senate Bot Administrator
 
 **Autonomous Digital Governance ChatOps Platform**
 
@@ -6,21 +6,21 @@ An AI-powered governance chatbot that helps Indian citizens interact with govern
 
 ---
 
-## ✨ Features
+## Features
 
-- 🤖 **AI-Powered Conversational Interface** — Natural language interaction via Llama 3.1:8b
-- 🔐 **Supabase Authentication** — Google OAuth & Email/Password login
-- 💬 **Persistent Chat History** — Conversations stored in Supabase PostgreSQL
-- 🌐 **Multilingual Support** — English, Hindi (हिंदी), Marathi (मराठी), Telugu (తెలుగు)
-- 🌙 **Light / Dark Mode** — Theme toggle with localStorage persistence
-- 📋 **My Applications** — Track service request status (Pending/Approved/Rejected)
-- 📊 **Government Scheme Awareness** — Auto-suggests eligible schemes with step-by-step guides
-- 📱 **Responsive Design** — Desktop, tablet, and mobile with collapsible sidebar
+- **AI-Powered Conversational Interface** — Natural language interaction via Llama 3.1:8b
+- **Supabase Authentication** — Google OAuth & Email/Password login
+- **Persistent Chat History** — Conversations stored in Supabase PostgreSQL
+- **Multilingual Support** — English, Hindi (हिंदी), Marathi (मराठी), Telugu (తెలుగు)
+- **Light / Dark Mode** — Theme toggle with localStorage persistence
+- **My Applications** — Track service request status (Pending/Approved/Rejected)
+- **Government Scheme Awareness** — Auto-suggests eligible schemes with step-by-step guides
+- **Responsive Design** — Desktop, tablet, and mobile with collapsible sidebar
 - 🇮🇳 **Indian Government-Inspired UI** — Saffron accent, clean DigiLocker-style design
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Senate-Bot-Administrator/
@@ -77,7 +77,7 @@ Senate-Bot-Administrator/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -141,7 +141,7 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 🔗 API Endpoints
+## API Endpoints
 
 | Method | Endpoint                     | Auth | Description                          |
 |--------|------------------------------|------|--------------------------------------|
@@ -160,7 +160,7 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 1. **User selects language** → English / Hindi / Marathi / Telugu
 2. **User authenticates** via Google OAuth or Email/Password (Supabase Auth)
@@ -173,21 +173,21 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 📋 Services
+## Services
 
 | Service | Description | Data Source |
 |---------|-------------|-------------|
-| 🪪 Ration Card Status | Check entitlement, scheme info, eligible benefits | Supabase |
-| 📜 Birth Certificate | Check issuance status, enabled services | Supabase |
-| 📝 Grievance Registration | File a public complaint with tracking ID | Mock |
-| 📍 Location Lookup | Get district/state from PIN code | Live API |
-| 🏠 Scheme Eligibility | Rule-based assessment (PMAY, NFSA, scholarships) | Built-in |
-| 📋 Apply for Service | Submit ration card, birth cert, housing applications | Supabase |
-| 🔍 Track Request Status | Check application status by request ID | Supabase |
+| Ration Card Status | Check entitlement, scheme info, eligible benefits | Supabase |
+| Birth Certificate | Check issuance status, enabled services | Supabase |
+| Grievance Registration | File a public complaint with tracking ID | Mock |
+| Location Lookup | Get district/state from PIN code | Live API |
+| Scheme Eligibility | Rule-based assessment (PMAY, NFSA, scholarships) | Built-in |
+| Apply for Service | Submit ration card, birth cert, housing applications | Supabase |
+| Track Request Status | Check application status by request ID | Supabase |
 
 ---
 
-## 🌐 Multilingual Support
+## Multilingual Support
 
 | Language | Code | UI | Chat |
 |----------|------|-----|------|
@@ -203,7 +203,7 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 🎨 UI/UX
+## UI/UX
 
 - **Indian Government-Inspired Design** — Saffron (#FF9933) accent, clean typography
 - **Light / Dark Mode** — Toggle with localStorage persistence
@@ -214,7 +214,7 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 🗃️ Database Schema (Supabase)
+## Database Schema (Supabase)
 
 | Table | Description |
 |-------|-------------|
@@ -229,7 +229,7 @@ All tables have **Row Level Security (RLS)** — users can only access their own
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer          | Technology                    |
 |----------------|-------------------------------|
@@ -244,12 +244,8 @@ All tables have **Row Level Security (RLS)** — users can only access their own
 
 ---
 
-## 👥 Team
+## Team
 
 Built for the **BlueBit Hackathon 2026**.
 
----
 
-## 📄 License
-
-This project is for educational and hackathon purposes.
