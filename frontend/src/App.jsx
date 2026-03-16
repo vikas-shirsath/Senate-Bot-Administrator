@@ -3,17 +3,21 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "./supabaseClient";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import Login from "./Login";
+import AdminPanel from "./AdminPanel";
 import LanguageSelect from "./LanguageSelect";
 import LanguageSwitcher from "./LanguageSwitcher";
 import ThemeToggle from "./components/ThemeToggle";
 import MessageBubble from "./components/MessageBubble";
+import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import "./App.css";
+import "./AdminPanel.css";
 
 import {
   BookOpenText, Cake, MapPinHouse, MessageSquareWarning,
   HousePlus, Handshake, MessageCircle, PanelLeftClose,
   PanelLeftOpen, Plus, LogOut, Send, Menu, Trash2,
-  ClipboardList, X, Clock, CheckCircle, XCircle, Loader
+  ClipboardList, X, Clock, CheckCircle, XCircle, Loader,
+  Mic, Square, BarChart3
 } from "lucide-react";
 
 import welcomeImg from "./assets/welcome.png";
@@ -54,15 +58,23 @@ function AppInner() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ollamaStatus, setOllamaStatus] = useState("checking");
+  const [groqStatus, setGroqStatus] = useState("online");
 
   // ── UI ──────────────────────────────────────
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // ── Voice recording ────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
   // ── My Applications ─────────────────────────
   const [showApplications, setShowApplications] = useState(false);
   const [serviceRequests, setServiceRequests] = useState([]);
+
+  // ── Analytics Dashboard ─────────────────────
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
 
   const bottomRef = useRef(null);
@@ -87,6 +99,13 @@ function AppInner() {
   const authHeaders = useCallback(
     async () => ({
       "Content-Type": "application/json",
+      Authorization: `Bearer ${await getToken()}`,
+    }),
+    [getToken]
+  );
+
+  const authHeadersRaw = useCallback(
+    async () => ({
       Authorization: `Bearer ${await getToken()}`,
     }),
     [getToken]
@@ -134,26 +153,26 @@ function AppInner() {
     })();
   }, [session, authHeaders]);
 
-  // ── Load messages on chat change ────────────
+  // ── Load messages on chat change or lang change ──
   useEffect(() => {
     if (!activeChatId || !session) { setMessages([]); return; }
     (async () => {
       try {
         const headers = await authHeaders();
-        const resp = await fetch(`${API_BASE}/chats/${activeChatId}/messages`, { headers });
+        const resp = await fetch(
+          `${API_BASE}/chats/${activeChatId}/messages?lang=${i18n.language}`,
+          { headers }
+        );
         const data = await resp.json();
-        setMessages(data.map((m) => ({ ...m, time: m.created_at })));
+        setMessages(data.map((m) => ({
+          ...m,
+          time: m.created_at,
+        })));
       } catch { /* offline */ }
     })();
-  }, [activeChatId, session, authHeaders]);
+  }, [activeChatId, session, authHeaders, i18n.language]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-
-  useEffect(() => {
-    fetch("http://localhost:11434/api/tags")
-      .then((r) => (r.ok ? setOllamaStatus("online") : setOllamaStatus("offline")))
-      .catch(() => setOllamaStatus("offline"));
-  }, []);
 
   // ── Create new chat ─────────────────────────
   const createNewChat = async () => {
@@ -171,33 +190,39 @@ function AppInner() {
     } catch { /* offline */ }
   };
 
-  // ── Send message ────────────────────────────
+  // ── Ensure active chat exists ──────────────
+  const ensureChatId = async () => {
+    if (activeChatId) return activeChatId;
+    try {
+      const headers = await authHeaders();
+      const resp = await fetch(`${API_BASE}/chats`, {
+        method: "POST", headers,
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+      const chat = await resp.json();
+      setChats((prev) => [chat, ...prev]);
+      setActiveChatId(chat.id);
+      return chat.id;
+    } catch {
+      return null;
+    }
+  };
+
+  // ── Send text message ──────────────────────
   const sendMessage = async (text) => {
     const userMsg = text || input.trim();
     if (!userMsg || loading) return;
 
-    let chatId = activeChatId;
-    if (!chatId) {
-      try {
-        const headers = await authHeaders();
-        const resp = await fetch(`${API_BASE}/chats`, {
-          method: "POST", headers,
-          body: JSON.stringify({ title: "New Chat" }),
-        });
-        const chat = await resp.json();
-        chatId = chat.id;
-        setChats((prev) => [chat, ...prev]);
-        setActiveChatId(chatId);
-      } catch { return; }
-    }
+    const chatId = await ensureChatId();
+    if (!chatId) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: userMsg, time: new Date().toISOString() }]);
+    setMessages((prev) => [...prev, { role: "user", content: userMsg, time: new Date().toISOString(), input_type: "text" }]);
     setInput("");
     setLoading(true);
 
     try {
       const headers = await authHeaders();
-      const resp = await fetch(`${API_BASE}/chat`, {
+      const resp = await fetch(`${API_BASE}/chat/text`, {
         method: "POST", headers,
         body: JSON.stringify({ chat_id: chatId, message: userMsg, preferred_language: i18n.language }),
       });
@@ -205,6 +230,8 @@ function AppInner() {
       setMessages((prev) => [...prev, {
         role: "assistant", content: data.reply,
         time: new Date().toISOString(), escalated: data.escalated || false,
+        audio_url: data.audio_base64 || null,
+        input_type: "text",
       }]);
       setChats((prev) =>
         prev.map((c) =>
@@ -223,7 +250,114 @@ function AppInner() {
     }
   };
 
+  // ── Voice recording ────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        await sendVoice(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic access denied:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+
+  const sendVoice = async (audioBlob) => {
+    if (loading) return;
+
+    const chatId = await ensureChatId();
+    if (!chatId) return;
+
+    setMessages((prev) => [...prev, {
+      role: "user", content: "🎤 Voice message…",
+      time: new Date().toISOString(), input_type: "voice",
+    }]);
+    setLoading(true);
+
+    try {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("chat_id", chatId);
+      formData.append("preferred_language", i18n.language);
+
+      const resp = await fetch(`${API_BASE}/chat/voice`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await resp.json();
+
+      // Update the user message with transcribed text
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastUserIdx = updated.findLastIndex((m) => m.role === "user" && m.input_type === "voice");
+        if (lastUserIdx >= 0) {
+          updated[lastUserIdx] = {
+            ...updated[lastUserIdx],
+            content: data.original_text || "🎤 Voice message",
+          };
+        }
+        return [...updated, {
+          role: "assistant", content: data.reply,
+          time: new Date().toISOString(), escalated: data.escalated || false,
+          audio_url: data.audio_base64 || null,
+          input_type: "voice",
+        }];
+      });
+
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === chatId && c.title === "New Chat"
+            ? { ...c, title: (data.original_text || "Voice").slice(0, 50) }
+            : c
+        )
+      );
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant", content: t("chat.server_error"), time: new Date().toISOString(),
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleKeyDown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+
+  // ── On-demand TTS (speaker icon) ────────────
+  const requestTTS = async (text) => {
+    try {
+      const headers = await authHeaders();
+      const resp = await fetch(`${API_BASE}/chat/tts`, {
+        method: "POST", headers,
+        body: JSON.stringify({ text, lang: i18n.language }),
+      });
+      const data = await resp.json();
+      return data.audio_base64 || null;
+    } catch {
+      return null;
+    }
+  };
 
   const deleteChat = async (chatId) => {
     try {
@@ -283,12 +417,18 @@ function AppInner() {
   if (!session) return <Login />;
 
   const userName = session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User";
+  const isAdmin = session.user.email === "admin@senate.gov";
 
-  const ollamaLabel = ollamaStatus === "online"
-    ? t("sidebar.ollama_connected")
-    : ollamaStatus === "checking"
-      ? t("sidebar.ollama_checking")
-      : t("sidebar.ollama_offline");
+  // Admin → AdminPanel
+  if (isAdmin) {
+    return (
+      <AdminPanel
+        getToken={getToken}
+        userName={userName}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   return (
     <div className="app">
@@ -359,6 +499,8 @@ function AppInner() {
           </button>
         </div>
 
+
+
         {/* Footer */}
         <div className="sidebar-footer">
           <div className="user-info">
@@ -371,8 +513,8 @@ function AppInner() {
             </button>
           </div>
           <div className="status-badge">
-            <span className={`status-dot ${ollamaStatus === "online" ? "" : "offline"}`} />
-            <span>Ollama — {ollamaLabel}</span>
+            <span className="status-dot" />
+            <span>Groq — {t("sidebar.ollama_connected")}</span>
           </div>
         </div>
       </aside>
@@ -422,6 +564,7 @@ function AppInner() {
 
       {/* ══ Main Content ════════════════════════ */}
       <main className="main">
+      <>
         {/* Navbar */}
         <nav className="navbar">
           <div className="navbar-left">
@@ -429,7 +572,7 @@ function AppInner() {
               <Menu size={18} />
             </button>
             <h2> {t("chat.heading")}</h2>
-            <span className="navbar-badge">{t("app.model_badge")}</span>
+            <span className="navbar-badge">Groq · llama-3.1-8b</span>
           </div>
           <div className="navbar-right">
             <LanguageSwitcher />
@@ -460,7 +603,7 @@ function AppInner() {
 
           {messages.map((msg, i) => (
             <MessageBubble key={i} msg={msg} renderMarkdown={renderMarkdown}
-              formatTime={formatTime} t={t} />
+              formatTime={formatTime} t={t} onRequestTTS={requestTTS} />
           ))}
 
           {loading && (
@@ -477,14 +620,32 @@ function AppInner() {
           <div className="input-wrapper">
             <input ref={inputRef} type="text" value={input}
               onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
-              placeholder={t("chat.placeholder")} disabled={loading} />
+              placeholder={t("chat.placeholder")} disabled={loading || isRecording} />
+
+            {/* Mic button */}
+            <button
+              className={`mic-btn ${isRecording ? "recording" : ""}`}
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={loading}
+              title={isRecording ? "Stop recording" : "Start voice input"}
+            >
+              {isRecording ? <Square size={16} /> : <Mic size={16} />}
+            </button>
+
             <button className="send-btn" onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}>
+              disabled={!input.trim() || loading || isRecording}>
               <Send size={16} />
             </button>
           </div>
+          {isRecording && (
+            <div className="recording-indicator">
+              <span className="rec-dot"></span>
+              <span>{t("chat.recording") || "Recording…"}</span>
+            </div>
+          )}
           <div className="input-hint">{t("app.disclaimer")}</div>
         </div>
+      </>
       </main>
     </div>
   );

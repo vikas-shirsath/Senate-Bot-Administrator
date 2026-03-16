@@ -1,14 +1,24 @@
 """
-LLM Agent — Communicates with Ollama (llama3.1:8b) for intent detection,
+LLM Agent — Communicates with Groq (llama-3.1-8b-instant) for intent detection,
 entity extraction, and response generation.
 """
 
 import json
+import os
 import re
-import httpx
+from groq import AsyncGroq
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = "llama3.1:8b"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+MODEL = "llama-3.1-8b-instant"
+
+_client: AsyncGroq | None = None
+
+
+def _get_client() -> AsyncGroq:
+    global _client
+    if _client is None:
+        _client = AsyncGroq(api_key=GROQ_API_KEY)
+    return _client
 
 
 SYSTEM_PROMPT = """You are Senate Bot, an AI governance assistant for Indian citizens.
@@ -110,39 +120,34 @@ RULES:
 - When presenting schemes, explain the steps clearly in a numbered format.
 - When you cannot help, suggest that the user be escalated to a human officer.
 - Do NOT invent data. Only trigger tool calls with entities explicitly provided by the user.
+- Always respond in English. Translation is handled by the system.
 """
 
 
 async def query_llm(conversation: list[dict]) -> str:
     """
-    Send the conversation history to Ollama and return the assistant's reply.
+    Send the conversation history to Groq and return the assistant's reply.
     `conversation` is a list of {"role": "user"|"assistant"|"system", "content": "..."}
     """
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + conversation
 
-    payload = {
-        "model": MODEL,
-        "messages": messages,
-        "stream": False,
-        "options": {
-            "temperature": 0.3,
-        },
-    }
-
     try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.post(OLLAMA_URL, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["message"]["content"]
-    except httpx.ConnectError:
-        return (
-            "⚠️ I'm unable to reach the language model server (Ollama). "
-            "Please make sure Ollama is running with `ollama serve` and the "
-            "llama3.1:8b model is pulled."
+        client = _get_client()
+        response = await client.chat.completions.create(
+            model=MODEL,
+            messages=messages,
+            temperature=0.3,
+            max_tokens=2048,
         )
+        return response.choices[0].message.content or ""
     except Exception as e:
-        return f"⚠️ An error occurred while processing your request: {str(e)}"
+        error_msg = str(e)
+        if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+            return (
+                "⚠️ Groq API key is missing or invalid. "
+                "Please set GROQ_API_KEY in the backend .env file."
+            )
+        return f"⚠️ An error occurred while processing your request: {error_msg}"
 
 
 def parse_action(llm_response: str) -> dict | None:

@@ -2,8 +2,8 @@
   "app": {
     "title": "Senate Bot",
     "subtitle": "Digital Governance Platform",
-    "model_badge": "llama3.1:8b",
-    "disclaimer": "Senate Bot uses Llama 3.1 to assist with governance queries. Always verify information with official sources."
+    "model_badge": "Groq · llama-3.1-8b",
+    "disclaimer": "Senate Bot uses Groq (Llama 3.1) to assist with governance queries. Always verify information with official sources."
   },
   "welcome": {
     "heading": "Welcome to Senate Bot",
@@ -39,7 +39,8 @@
     "placeholder": "Ask about government services…",
     "new_chat_btn": "＋",
     "server_error": "⚠️ Unable to reach the server. Please make sure the FastAPI backend is running on port 8000.",
-    "escalation": "⚠️ Escalation suggested — connect to human officer"
+    "escalation": "⚠️ Escalation suggested — connect to human officer",
+    "recording": "Recording…"
   },
   "auth": {
     "login_title": "Senate Bot",

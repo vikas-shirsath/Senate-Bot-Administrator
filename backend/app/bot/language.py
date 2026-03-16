@@ -1,16 +1,37 @@
 """
 Language detection utility using langdetect.
+Scoped to English, Hindi, Marathi (project languages).
 """
 
 from langdetect import detect, LangDetectException
 
-SUPPORTED_LANGS = {"en", "hi", "mr", "te"}
+SUPPORTED_LANGS = {"en", "hi", "mr"}
 
 LANG_NAMES = {
     "en": "English",
     "hi": "Hindi",
     "mr": "Marathi",
-    "te": "Telugu",
+}
+
+# Reverie language codes (same as ISO 639-1 for these)
+REVERIE_LANG_CODES = {
+    "en": "en",
+    "hi": "hi",
+    "mr": "mr",
+}
+
+# Reverie TTS speaker names
+REVERIE_SPEAKERS = {
+    "en": "en_female",
+    "hi": "hi_female",
+    "mr": "mr_female",
+}
+
+# DB column names for each language response
+LANG_RESPONSE_COLUMNS = {
+    "en": "response_english",
+    "hi": "response_hindi",
+    "mr": "response_marathi",
 }
 
 
@@ -24,11 +45,8 @@ def detect_language(text: str) -> str:
 
     try:
         detected = detect(text)
-        # langdetect returns ISO 639-1 codes
         if detected in SUPPORTED_LANGS:
             return detected
-        # Fallback: langdetect sometimes returns 'hi' for Marathi since
-        # both use Devanagari. We keep the detected code if supported.
         return "en"
     except LangDetectException:
         return "en"

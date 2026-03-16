@@ -195,3 +195,65 @@
 .login-footer a:hover {
   text-decoration: underline;
 }
+
+/* ── Admin Mode Login ─────────────────────────── */
+.login-card.admin-mode {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.08), var(--shadow-lg);
+}
+
+.admin-shield-icon {
+  width: 60px; height: 60px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(239,68,68,0.2));
+  border: 1px solid rgba(245,158,11,0.3);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+  color: #f59e0b;
+}
+
+.login-btn.admin-submit {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+  border: none;
+}
+.login-btn.admin-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+}
+
+/* Back button */
+.login-back-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none;
+  color: var(--text-muted); font-size: 12px;
+  cursor: pointer; padding: 0; margin-bottom: 12px;
+  transition: color 0.2s;
+}
+.login-back-btn:hover { color: var(--accent-light); }
+
+/* ── Role Select Cards ────────────────────────── */
+.role-options {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 12px;
+}
+.role-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer; text-align: left;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.role-card:hover { border-color: var(--accent-light); }
+.role-card.active {
+  border-color: #818cf8;
+  background: rgba(129,140,248,0.08);
+  color: var(--text-primary);
+}
+.role-card-text { display: flex; flex-direction: column; gap: 2px; }
+.role-card-text strong { font-size: 0.95rem; color: var(--text-primary); }
+.role-card-text span { font-size: 0.75rem; color: var(--text-muted); }
+

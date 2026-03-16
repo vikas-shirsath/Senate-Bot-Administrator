@@ -1,8 +1,9 @@
 """
 Chats router — CRUD endpoints for chat sessions and message history.
+Supports multilingual message retrieval.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.auth import get_current_user
@@ -13,6 +14,14 @@ router = APIRouter()
 
 class CreateChatRequest(BaseModel):
     title: str = "New Chat"
+
+
+# Column mapping for language-specific responses
+_LANG_COLUMNS = {
+    "en": "response_english",
+    "hi": "response_hindi",
+    "mr": "response_marathi",
+}
 
 
 # ── List all chats for the current user ──────────────────
@@ -46,7 +55,11 @@ async def create_chat(
 
 # ── Get messages for a chat ──────────────────────────────
 @router.get("/{chat_id}/messages")
-async def get_messages(chat_id: str, user: dict = Depends(get_current_user)):
+async def get_messages(
+    chat_id: str,
+    lang: str = Query("en", description="Language for response display"),
+    user: dict = Depends(get_current_user),
+):
     sb = get_supabase()
     # Verify the chat belongs to the user
     chat = (
@@ -66,7 +79,24 @@ async def get_messages(chat_id: str, user: dict = Depends(get_current_user)):
         .order("created_at", desc=False)
         .execute()
     )
-    return messages.data
+
+    # Format messages with language-appropriate content
+    lang_col = _LANG_COLUMNS.get(lang, "response_english")
+    formatted = []
+    for m in messages.data:
+        if m["role"] == "user":
+            # Show original text for user messages
+            content = m.get("original_text") or m.get("content", "")
+        else:
+            # Show language-specific response for assistant messages
+            content = m.get(lang_col) or m.get("content", "")
+
+        formatted.append({
+            **m,
+            "content": content,
+        })
+
+    return formatted
 
 
 # ── Update chat title ────────────────────────────────────
