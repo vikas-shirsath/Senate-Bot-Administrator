@@ -17,7 +17,7 @@ import {
   HousePlus, Handshake, MessageCircle, PanelLeftClose,
   PanelLeftOpen, Plus, LogOut, Send, Menu, Trash2,
   ClipboardList, X, Clock, CheckCircle, XCircle, Loader,
-  Mic, Square, BarChart3
+  Mic, Square, BarChart3, Paperclip, FileText, Award
 } from "lucide-react";
 
 import welcomeImg from "./assets/welcome.png";
@@ -69,6 +69,10 @@ function AppInner() {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
+  // ── File upload ─────────────────────────────
+  const fileInputRef = useRef(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+
   // ── My Applications ─────────────────────────
   const [showApplications, setShowApplications] = useState(false);
   const [serviceRequests, setServiceRequests] = useState([]);
@@ -88,6 +92,8 @@ function AppInner() {
     { icon: <MessageSquareWarning size={16} />, labelKey: "sidebar.grievance", promptKey: "welcome.chips.grievance" },
     { icon: <HousePlus size={16} />, labelKey: "sidebar.housing", promptKey: "welcome.chips.eligibility" },
     { icon: <Handshake size={16} />, labelKey: "sidebar.apply_service", promptKey: "welcome.chips.apply" },
+    { icon: <FileText size={16} />, labelKey: "sidebar.permit_cert", prompt: "I want to apply for a permit certificate" },
+    { icon: <Award size={16} />, labelKey: "sidebar.income_cert", prompt: "I need an income certificate" },
   ];
 
   // ── Helpers ─────────────────────────────────
@@ -247,6 +253,65 @@ function AppInner() {
     } finally {
       setLoading(false);
       inputRef.current?.focus();
+    }
+  };
+
+  // ── File Upload Handler ────────────────────
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Must have active chat to "send" the uploaded file to
+    const chatId = await ensureChatId();
+    if (!chatId) return;
+
+    setUploadingFile(true);
+    try {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("file", file);
+      // Let's assume the user is uploading Aadhaar by default, agent will figure it out based on prompt
+      formData.append("doc_type", "document");
+
+      const resp = await fetch(`${API_BASE}/certificate/upload-document`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!resp.ok) throw new Error("Upload failed");
+      const data = await resp.json();
+
+      // Automatically send the public URL as a user message so the agent receives it
+      const fileUrl = data.url;
+      const userMsg = `[File Uploaded: ${file.name}](${fileUrl})`;
+
+      // Immediately send it as a message to continue the flow
+      setMessages((prev) => [...prev, { role: "user", content: userMsg, time: new Date().toISOString(), input_type: "text" }]);
+      setLoading(true);
+
+      const headers = await authHeaders();
+      const chatResp = await fetch(`${API_BASE}/chat/text`, {
+        method: "POST", headers,
+        body: JSON.stringify({ chat_id: chatId, message: userMsg, preferred_language: i18n.language }),
+      });
+      const chatData = await chatResp.json();
+      setMessages((prev) => [...prev, {
+        role: "assistant", content: chatData.reply,
+        time: new Date().toISOString(), escalated: chatData.escalated || false,
+        audio_url: chatData.audio_base64 || null,
+        input_type: "text",
+      }]);
+    } catch (err) {
+      console.error("File upload error:", err);
+      setMessages((prev) => [...prev, {
+        role: "assistant", content: "Failed to upload file. Please try again.", time: new Date().toISOString(),
+      }]);
+    } finally {
+      setUploadingFile(false);
+      setLoading(false);
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -484,9 +549,9 @@ function AppInner() {
           <div className="section-label">{t("sidebar.quick_actions")}</div>
           {QUICK_ACTIONS.map((qa, idx) => (
             <button key={idx} className="quick-btn"
-              onClick={() => sendMessage(t(qa.promptKey))} disabled={loading}>
+              onClick={() => sendMessage(qa.prompt || t(qa.promptKey))} disabled={loading}>
               <span className="q-icon">{qa.icon}</span>
-              <span className="q-label">{t(qa.labelKey)}</span>
+              <span className="q-label">{t(qa.labelKey) || qa.labelKey}</span>
             </button>
           ))}
         </div>
@@ -621,6 +686,14 @@ function AppInner() {
             <input ref={inputRef} type="text" value={input}
               onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder={t("chat.placeholder")} disabled={loading || isRecording} />
+
+            {/* File attach button */}
+            <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
+              style={{ display: "none" }} onChange={handleFileUpload} />
+            <button className="attach-btn" onClick={() => fileInputRef.current?.click()}
+              disabled={loading || uploadingFile} title="Attach document">
+              {uploadingFile ? <Loader size={16} className="spin" /> : <Paperclip size={16} />}
+            </button>
 
             {/* Mic button */}
             <button

@@ -105,47 +105,41 @@ async def text_to_speech(text: str, lang: str = "hi") -> bytes | None:
 
 
 # ══════════════════════════════════════════════════════════
-# Reverie — Translation
+# Translation — Migrated to Sarvam AI (Reverie Exceeded)
 # ══════════════════════════════════════════════════════════
 
-REVERIE_BASE = "https://revapi.reverieinc.com/"
-
-
-def _reverie_headers() -> dict:
-    return {
-        "REV-API-KEY": os.getenv("REVERIE_API_KEY", ""),
-        "REV-APP-ID": os.getenv("REVERIE_APP_ID", "com.white2tiger57"),
-    }
-
-
 async def translate(text: str, src_lang: str, tgt_lang: str) -> str:
-    """Reverie Translation — localization API."""
+    """Translation using Sarvam AI (mayura:v1)."""
     if src_lang == tgt_lang or not text.strip():
         return text
 
-    headers = {
-        **_reverie_headers(),
-        "REV-APPNAME": "localization",
-        "REV-APPVERSION": "3.0",
-        "Content-Type": "application/json",
-        "src_lang": src_lang,
-        "tgt_lang": tgt_lang,
-        "domain": "generic",
-    }
+    # Map generic language codes to Sarvam format
+    sarvam_src = _SARVAM_LANG_CODES.get(src_lang, f"{src_lang}-IN")
+    sarvam_tgt = _SARVAM_LANG_CODES.get(tgt_lang, f"{tgt_lang}-IN")
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                REVERIE_BASE,
-                headers=headers,
-                json={"data": [text]},
+                f"{SARVAM_BASE}/translate",
+                headers={**_sarvam_header(), "Content-Type": "application/json"},
+                json={
+                    "input": text,
+                    "source_language_code": sarvam_src,
+                    "target_language_code": sarvam_tgt,
+                    "speaker_gender": "Female",
+                    "mode": "formal",
+                    "model": "mayura:v1",
+                    "enable_preprocessing": True
+                },
             )
-            resp.raise_for_status()
+            
+            if resp.status_code != 200:
+                print(f"[Sarvam Translate Error] HTTP {resp.status_code}: {resp.text}")
+                return text
+                
             data = resp.json()
-            response_list = data.get("responseList", [])
-            if response_list:
-                return response_list[0].get("outString", text)
-            return text
+            return data.get("translated_text", text)
+            
     except Exception as e:
-        print(f"[Reverie Translation Error] {type(e).__name__}: {e}")
+        print(f"[Sarvam Translate Error] {type(e).__name__}: {e}")
         return text

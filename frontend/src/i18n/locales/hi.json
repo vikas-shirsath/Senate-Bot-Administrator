@@ -29,6 +29,8 @@
     "grievance": "शिकायत दर्ज करें",
     "housing": "आवास पात्रता",
     "apply_service": "सेवा के लिए आवेदन करें",
+    "permit_cert": "परमिट प्रमाणपत्र",
+    "income_cert": "आय प्रमाणपत्र",
     "ollama_connected": "जुड़ा हुआ",
     "ollama_checking": "जाँच हो रही है…",
     "ollama_offline": "ऑफ़लाइन",

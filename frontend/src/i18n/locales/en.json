@@ -29,6 +29,8 @@
     "grievance": "File a grievance",
     "housing": "Housing eligibility",
     "apply_service": "Apply for service",
+    "permit_cert": "Permit Certificate",
+    "income_cert": "Income Certificate",
     "ollama_connected": "Connected",
     "ollama_checking": "Checking…",
     "ollama_offline": "Offline",

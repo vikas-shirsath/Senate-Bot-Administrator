@@ -274,8 +274,10 @@ async def _apply_service(entities: dict) -> dict:
                 "request_id": request_id,
                 "status": "pending",
                 "applicant_details": applicant_details,
+                "attached_file_urls": entities.get("attached_files", []),
             }).execute()
-        except Exception:
+        except Exception as e:
+            print(f"Error saving service request: {e}")
             pass  # Gracefully continue even if DB save fails
 
     friendly_name = service_type.replace("_", " ").title()
@@ -360,6 +362,235 @@ async def _check_request_status(entities: dict) -> dict:
     }
 
 
+# ── Certificate Application Handlers ────────────────────
+
+async def _apply_permit_certificate(entities: dict) -> dict:
+    """Generate a Permit Certificate directly."""
+    from app.services.certificate_generator import (
+        generate_permit_pdf, generate_permit_number,
+        generate_issue_number, calculate_expiry_date,
+    )
+    import uuid
+
+    required = ["owner", "business", "address", "activity", "start_date", "city", "issued_date"]
+    missing = [f for f in required if not entities.get(f)]
+    if missing:
+        friendly = ", ".join(f.replace("_", " ").title() for f in missing)
+        return {"success": False, "message": f"I still need: **{friendly}** to generate your Permit Certificate."}
+
+    user_id = entities.get("_user_id", "")
+    sb = get_supabase()
+
+    # Get next sequential ID
+    count_result = sb.table("permit_certificates").select("id", count="exact").execute()
+    seq_id = (count_result.count or 0) + 1
+
+    permit_number = generate_permit_number(seq_id)
+    issue_number = generate_issue_number(seq_id)
+    expiry_date = calculate_expiry_date(entities["start_date"])
+    authority = "Government of Maharashtra"
+
+    cert_data = {
+        "issue_number": issue_number,
+        "permit_number": permit_number,
+        "owner": entities["owner"],
+        "business": entities["business"],
+        "address": entities["address"],
+        "activity": entities["activity"],
+        "authority": authority,
+        "start_date": entities["start_date"],
+        "expiry_date": expiry_date,
+        "city": entities["city"],
+        "issued_date": entities["issued_date"],
+    }
+
+    try:
+        pdf_bytes = generate_permit_pdf(cert_data)
+        print(f"[Permit Cert] PDF generated: {len(pdf_bytes)} bytes")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "message": f"PDF generation failed: {str(e)}"}
+
+    if not pdf_bytes or len(pdf_bytes) < 100:
+        return {"success": False, "message": "PDF generation produced empty output. Check wkhtmltopdf installation."}
+
+    # Upload PDF
+    pdf_filename = f"permit_{permit_number.replace('-', '_')}.pdf"
+    try:
+        print(f"[Permit Cert] Uploading to certificates/{pdf_filename}")
+        sb.storage.from_("certificates").upload(
+            pdf_filename, pdf_bytes,
+            file_options={"content-type": "application/pdf"}
+        )
+        print(f"[Permit Cert] Upload successful")
+    except Exception as e:
+        print(f"[Permit Cert] First upload failed: {e}, trying fallback name")
+        try:
+            pdf_filename = f"permit_{uuid.uuid4().hex[:8]}.pdf"
+            sb.storage.from_("certificates").upload(
+                pdf_filename, pdf_bytes,
+                file_options={"content-type": "application/pdf"}
+            )
+            print(f"[Permit Cert] Fallback upload successful: {pdf_filename}")
+        except Exception as e2:
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "message": f"Failed to upload certificate to storage: {str(e2)}. Make sure the 'certificates' storage bucket exists in Supabase and is set to public."}
+
+    certificate_url = sb.storage.from_("certificates").get_public_url(pdf_filename)
+    print(f"[Permit Cert] Public URL: {certificate_url}")
+
+    # Save to DB
+    try:
+        sb.table("permit_certificates").insert({
+            "user_id": user_id,
+            "issue_number": issue_number,
+            "permit_number": permit_number,
+            "owner": entities["owner"],
+            "business": entities["business"],
+            "address": entities["address"],
+            "activity": entities["activity"],
+            "authority": authority,
+            "start_date": entities["start_date"],
+            "expiry_date": expiry_date,
+            "city": entities["city"],
+            "issued_date": entities["issued_date"],
+            "aadhaar_document_url": entities.get("aadhaar_document_url", ""),
+            "pan_document_url": entities.get("pan_document_url", ""),
+            "certificate_url": certificate_url,
+        }).execute()
+        print(f"[Permit Cert] DB record saved")
+    except Exception as e:
+        print(f"[Permit Cert] DB save error (continuing): {e}")
+
+    return {
+        "success": True,
+        "service": "Permit Certificate",
+        "data": {"permit_number": permit_number, "issue_number": issue_number,
+                 "expiry_date": expiry_date, "certificate_url": certificate_url},
+        "summary": (
+            f"✅ Your **Permit Certificate** has been generated successfully!\n\n"
+            f"**Permit Number:** {permit_number}\n"
+            f"**Issue Number:** {issue_number}\n"
+            f"**Valid Until:** {expiry_date}\n\n"
+            f"📥 **Download:** {certificate_url}"
+        ),
+    }
+
+
+async def _apply_income_certificate(entities: dict) -> dict:
+    """Generate an Income Certificate directly."""
+    from app.services.certificate_generator import (
+        generate_income_pdf, generate_income_cert_number,
+    )
+    import uuid
+
+    required = ["name", "village", "taluka", "district", "financial_year",
+                 "annual_income", "income_words", "place", "date"]
+    missing = [f for f in required if not entities.get(f)]
+    if missing:
+        friendly = ", ".join(f.replace("_", " ").title() for f in missing)
+        return {"success": False, "message": f"I still need: **{friendly}** to generate your Income Certificate."}
+
+    user_id = entities.get("_user_id", "")
+    sb = get_supabase()
+
+    try:
+        count_result = sb.table("income_certificates").select("id", count="exact").execute()
+        seq_id = (count_result.count or 0) + 1
+    except Exception as e:
+        print(f"[Income Cert] DB count error: {e}")
+        seq_id = 1
+
+    certificate_number = generate_income_cert_number(seq_id)
+    print(f"[Income Cert] Generating certificate: {certificate_number}")
+
+    cert_data = {
+        "certificate_number": certificate_number,
+        "name": entities["name"],
+        "village": entities["village"],
+        "taluka": entities["taluka"],
+        "district": entities["district"],
+        "financial_year": entities["financial_year"],
+        "annual_income": entities["annual_income"],
+        "income_words": entities["income_words"],
+        "place": entities["place"],
+        "date": entities["date"],
+    }
+
+    # Generate PDF
+    try:
+        pdf_bytes = generate_income_pdf(cert_data)
+        print(f"[Income Cert] PDF generated: {len(pdf_bytes)} bytes")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "message": f"PDF generation failed: {str(e)}"}
+
+    if not pdf_bytes or len(pdf_bytes) < 100:
+        return {"success": False, "message": "PDF generation produced empty output. Check wkhtmltopdf installation."}
+
+    # Upload PDF to Supabase Storage
+    pdf_filename = f"income_{certificate_number.replace('-', '_')}.pdf"
+    try:
+        print(f"[Income Cert] Uploading to certificates/{pdf_filename}")
+        sb.storage.from_("certificates").upload(
+            pdf_filename, pdf_bytes,
+            file_options={"content-type": "application/pdf"}
+        )
+        print(f"[Income Cert] Upload successful")
+    except Exception as e:
+        print(f"[Income Cert] First upload failed: {e}, trying fallback name")
+        try:
+            pdf_filename = f"income_{uuid.uuid4().hex[:8]}.pdf"
+            sb.storage.from_("certificates").upload(
+                pdf_filename, pdf_bytes,
+                file_options={"content-type": "application/pdf"}
+            )
+            print(f"[Income Cert] Fallback upload successful: {pdf_filename}")
+        except Exception as e2:
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "message": f"Failed to upload certificate to storage: {str(e2)}. Make sure the 'certificates' storage bucket exists in Supabase and is set to public."}
+
+    certificate_url = sb.storage.from_("certificates").get_public_url(pdf_filename)
+    print(f"[Income Cert] Public URL: {certificate_url}")
+
+    # Save to DB
+    try:
+        sb.table("income_certificates").insert({
+            "user_id": user_id,
+            "certificate_number": certificate_number,
+            "name": entities["name"],
+            "village": entities["village"],
+            "taluka": entities["taluka"],
+            "district": entities["district"],
+            "financial_year": entities["financial_year"],
+            "annual_income": entities["annual_income"],
+            "income_words": entities["income_words"],
+            "place": entities["place"],
+            "date": entities["date"],
+            "aadhaar_document_url": entities.get("aadhaar_document_url", ""),
+            "pan_document_url": entities.get("pan_document_url", ""),
+            "certificate_url": certificate_url,
+        }).execute()
+        print(f"[Income Cert] DB record saved")
+    except Exception as e:
+        print(f"[Income Cert] DB save error (continuing): {e}")
+
+    return {
+        "success": True,
+        "service": "Income Certificate",
+        "data": {"certificate_number": certificate_number, "certificate_url": certificate_url},
+        "summary": (
+            f"✅ Your **Income Certificate** has been generated successfully!\n\n"
+            f"**Certificate Number:** {certificate_number}\n\n"
+            f"📥 **Download:** {certificate_url}"
+        ),
+    }
+
+
 # ── Action map ───────────────────────────────────────────
 _ACTION_MAP = {
     "check_ration": _check_ration,
@@ -369,4 +600,6 @@ _ACTION_MAP = {
     "check_eligibility": _check_eligibility,
     "apply_service": _apply_service,
     "check_request_status": _check_request_status,
+    "apply_permit_certificate": _apply_permit_certificate,
+    "apply_income_certificate": _apply_income_certificate,
 }

@@ -191,18 +191,34 @@ async def _process_chat(
 
         if result.get("success"):
             service_result = result.get("data")
-            # Ask LLM to present the result nicely
-            follow_up = (
-                f"Here is the result from the {result.get('service', 'service')} lookup:\n\n"
-                f"{result['summary']}\n\n"
-                "Please present this information clearly to the user in a friendly, "
-                "easy-to-understand format. Include the policy reference. Respond in English."
-            )
-            history.append({"role": "assistant", "content": llm_reply})
-            history.append({"role": "user", "content": follow_up})
-            final_english = await query_llm(history)
+
+            # For certificate services, use the summary directly —
+            # do NOT send it through the LLM because it rewrites URLs
+            # and certificate numbers, causing 404 download errors.
+            if action_name in ("apply_permit_certificate", "apply_income_certificate"):
+                final_english = result["summary"]
+            else:
+                # Ask LLM to present the result nicely
+                follow_up = (
+                    f"Here is the result from the {result.get('service', 'service')} lookup:\n\n"
+                    f"{result['summary']}\n\n"
+                    "Please present this information clearly to the user in a friendly, "
+                    "easy-to-understand format. Include the policy reference. Respond in English."
+                )
+                history.append({"role": "assistant", "content": llm_reply})
+                history.append({"role": "user", "content": follow_up})
+                final_english = await query_llm(history)
         else:
-            final_english = result.get("message", "Something went wrong.")
+            # Feed the error back to the LLM so it can ask the user naturally
+            # instead of sending a static error message directly
+            error_msg = result.get("message", "Something went wrong.")
+            history.append({"role": "assistant", "content": llm_reply})
+            history.append({"role": "user", "content": (
+                f"The action failed because: {error_msg}\n"
+                "Please ask the user for the missing information in a friendly, "
+                "conversational way. Do NOT output JSON yet — just ask the question."
+            )})
+            final_english = await query_llm(history)
 
     # Step 4 — Translate response to all languages
     translations = await _translate_to_all(final_english)

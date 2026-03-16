@@ -1327,4 +1327,38 @@
   to { transform: rotate(360deg); }
 }
 
+.send-btn, .attach-btn {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.attach-btn {
+  margin-right: 4px;
+}
+
+.auth-submit-btn:disabled, .send-btn:disabled, .attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.send-btn:not(:disabled):hover, .attach-btn:not(:disabled):hover {
+  background: var(--bg-glass-hover);
+  color: var(--accent-light);
+  border-color: var(--border-accent);
+  transform: scale(1.05);
+}
+
 
